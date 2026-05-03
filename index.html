@@ -1,341 +1,665 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Operations & Payroll - Updated</title>
-    <style>
-        :root { 
-            --primary: #2563eb; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
-            --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --text: #0f172a; --text-dim: #64748b;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
-        
-        .container { max-width: 1200px; margin: 0 auto; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: white; padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border); }
-        .nav-tabs { display: flex; gap: 5px; background: #f1f5f9; padding: 4px; border-radius: 8px; }
-        .tab-btn { padding: 8px 16px; border: none; background: none; cursor: pointer; border-radius: 6px; font-weight: 600; color: var(--text-dim); transition: 0.2s; }
-        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        
-        .panel { display: none; }
-        .panel.active { display: block; }
-
-        .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 15px; }
-        .shift-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; border-left: 6px solid #cbd5e1; transition: 0.3s; }
-        
-        /* Green color for ANY active shift (Regular or Replaced) */
-        .shift-card.active { border-left-color: var(--success) !important; background: #f0fdf4 !important; }
-        .shift-card.replaced { border-left-color: var(--warning); background: #fffbeb; }
-        
-        .status-badge { position: absolute; top: 15px; right: 15px; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-        .status-on { background: #dcfce7; color: #166534; }
-        .status-rep { background: #fef3c7; color: #92400e; }
-
-        .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
-        th { background: #f8fafc; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid var(--border); }
-        td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
-        
-        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
-        label { display: block; font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 4px; }
-        input, select, button { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
-        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; }
-        .stat-box { background: #f8fafc; border: 1px solid var(--border); padding: 10px; border-radius: 8px; text-align: center; }
-        .stat-val { font-size: 18px; font-weight: 700; display: block; }
-        .stat-lbl { font-size: 10px; color: var(--text-dim); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Report Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#2c2c2a;font-size:14px}
+.app{max-width:900px;margin:0 auto;padding:2rem 1.5rem 4rem}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;gap:16px;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:600;margin-bottom:3px}
+.page-sub{font-size:13px;color:#888}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #dddbd4;margin-bottom:1.5rem}
+.tab{padding:8px 18px;font-size:13px;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;color:#888;font-family:inherit;transition:color .15s}
+.tab.active{color:#2c2c2a;border-bottom-color:#7f77dd;font-weight:500}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.card{background:#fff;border:.5px solid #d3d1c7;border-radius:12px;padding:1.25rem;margin-bottom:12px}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.section-label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+label{font-size:11px;color:#888;font-weight:500}
+input,select{padding:7px 10px;border:.5px solid #d3d1c7;border-radius:8px;font-size:13px;background:#fff;outline:none;font-family:inherit;color:#2c2c2a}
+input:focus,select:focus{border-color:#7f77dd;box-shadow:0 0 0 2px rgba(127,119,221,.12)}
+input[type=date]{color:#2c2c2a}
+.btn{padding:6px 13px;border-radius:8px;font-size:12px;cursor:pointer;border:.5px solid #d3d1c7;background:#fff;font-family:inherit;transition:background .12s}
+.btn:hover{background:#f5f4f0}
+.btn-primary{background:#7f77dd;color:#fff;border-color:#7f77dd;font-weight:500;font-size:14px;padding:9px 22px;border-radius:9px}
+.btn-primary:hover{background:#6d65c8}
+.btn-remove{color:#d85a30;border-color:#f0997b;padding:5px 10px;font-size:12px}
+.btn-remove:hover{background:#faece7}
+.btn-add{color:#1d9e75;border-color:#5dcaa5;font-size:12px}
+.btn-add:hover{background:#e1f5ee}
+.staff-block{background:#f9f8f5;border:.5px solid #e0ded8;border-radius:10px;padding:14px;margin-bottom:10px}
+.staff-block-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;letter-spacing:.02em}
+.name-input{font-weight:600;font-size:15px;border:none;padding:2px 0;background:transparent;outline:none;width:100%;color:#2c2c2a}
+.name-input::placeholder{color:#bbb}
+.role-input{font-size:12px;color:#888;border:none;padding:1px 0;background:transparent;outline:none;width:100%;color:#888}
+.role-input::placeholder{color:#ccc}
+.shift-grid{display:grid;gap:8px;align-items:end;margin-bottom:6px}
+.shift-grid-4{grid-template-columns:100px 1fr 1fr 70px 36px}
+.shift-grid-3{grid-template-columns:100px 1fr 70px 36px}
+.shift-grid input{font-size:12px}
+.rm-btn{width:34px;height:34px;border-radius:8px;border:.5px solid #e0ded8;background:#fff;cursor:pointer;font-size:15px;color:#999;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}
+.rm-btn:hover{background:#faece7;color:#d85a30;border-color:#f0997b}
+.totals-bar{margin-top:10px;padding:8px 12px;background:#fff;border:.5px solid #e0ded8;border-radius:8px;font-size:13px;display:flex;gap:16px}
+.totals-bar strong{color:#2c2c2a}
+.tag-pay{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;background:#faeeda;color:#633806}
+.panel-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.panel-topbar-title{font-size:14px;font-weight:500}
+.panel-topbar-sub{font-size:12px;color:#888}
+.hint{font-size:11px;color:#aaa;margin-top:3px}
+.divider{border:none;border-top:.5px solid #e0ded8;margin:14px 0}
+.col-header{font-size:10px;color:#aaa;font-weight:500;padding-bottom:2px}
+</style>
 </head>
 <body>
+<div class="app">
 
-<div class="container">
-    <div class="header">
-        <div>
-            <h1 style="font-size: 18px;">Staff Management Suite</h1>
-            <p id="live-clock" style="font-size: 12px; color: var(--text-dim);"></p>
-        </div>
-        <div class="nav-tabs">
-            <button class="tab-btn active" onclick="switchTab('dash')">Dashboard</button>
-            <button class="tab-btn" onclick="switchTab('routine')">Routine & Leaves</button>
-            <button class="tab-btn" onclick="switchTab('payroll')">Payroll & Staff</button>
-        </div>
+  <div class="topbar">
+    <div>
+      <div class="page-title">Attendance Report Generator</div>
+      <div class="page-sub">Enter staff data monthly — click Generate to download a formatted PDF</div>
     </div>
+    <button class="btn btn-primary" onclick="generatePDF()">⬇ Generate PDF</button>
+  </div>
 
-    <div id="panel-dash" class="panel active">
-        <h2 style="font-size: 15px; margin-bottom: 15px;">Live Shift Dashboard</h2>
-        <div class="dash-grid" id="dash-container"></div>
-    </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(0)">Report Settings</button>
+    <button class="tab" onclick="switchTab(1)">Extra Hours Staff</button>
+    <button class="tab" onclick="switchTab(2)">Leave Staff</button>
+    <button class="tab" onclick="switchTab(3)">One-Off Replacements</button>
+  </div>
 
-    <div id="panel-routine" class="panel">
-        <div class="card">
-            <h2 style="font-size: 15px; margin-bottom: 10px;">Weekly Routine</h2>
-            <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 15px;">Updates here reflect immediately on the dashboard.</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Day</th>
-                        <th>4-8 AM</th>
-                        <th>8 AM-6 PM</th>
-                        <th>6-12 PM</th>
-                        <th>12-4 AM</th>
-                    </tr>
-                </thead>
-                <tbody id="routine-body"></tbody>
-            </table>
+  <!-- TAB 0: Settings -->
+  <div class="tab-panel active" id="tab-0">
+    <div class="card">
+      <div class="section-label">Report details</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Month</label>
+          <select id="r-month">
+            <option>January</option><option>February</option><option>March</option>
+            <option selected>April</option><option>May</option><option>June</option>
+            <option>July</option><option>August</option><option>September</option>
+            <option>October</option><option>November</option><option>December</option>
+          </select>
         </div>
-
-        <div class="card" style="border-top: 4px solid var(--warning);">
-            <h2 style="font-size: 15px; margin-bottom: 15px;">Bulk Leave Entry</h2>
-            <div class="form-row">
-                <div><label>From Date</label><input type="date" id="lv-start"></div>
-                <div><label>To Date</label><input type="date" id="lv-end"></div>
-                <div><label>Absent Staff</label><select id="lv-absent" class="staff-drop"></select></div>
-                <div><label>Covered By</label><select id="lv-cover" class="staff-drop"></select></div>
-                <div><button onclick="addLeaveRange()" style="margin-top: 18px;">Apply Leave</button></div>
-            </div>
-            <div id="leave-log" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;"></div>
+        <div class="form-group">
+          <label>Year</label>
+          <input type="number" id="r-year" value="2026" min="2020" max="2040">
         </div>
-    </div>
-
-    <div id="panel-payroll" class="panel">
-        <div class="form-row" style="margin-bottom: 20px;">
-            <div class="card" style="margin-bottom: 0;">
-                <label>Add New Staff</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="new-staff-name" placeholder="Name">
-                    <button onclick="addStaff()" style="width: auto;">Add</button>
-                </div>
-            </div>
-            <div class="card" style="margin-bottom: 0;">
-                <label>Rename Existing Staff</label>
-                <div style="display: flex; gap: 5px;">
-                    <select id="rename-old" class="staff-drop" style="flex:1"></select>
-                    <input type="text" id="rename-new" placeholder="New Name" style="flex:1">
-                    <button onclick="renameStaff()" style="width: auto;">Update</button>
-                </div>
-            </div>
+        <div class="form-group">
+          <label>Pay rate per extra hour ($)</label>
+          <input type="number" id="r-rate" value="2.50" step="0.50" min="0">
+          <span class="hint">Used to calculate extra hours payment</span>
         </div>
-        <div class="dash-grid" id="payroll-grid"></div>
+      </div>
     </div>
+    <div class="card" style="background:#eeedfe;border-color:#afa9ec">
+      <div style="font-size:13px;font-weight:500;color:#3c3489;margin-bottom:6px">How to use each month</div>
+      <div style="font-size:12px;color:#534ab7;line-height:1.7">
+        1. Update <strong>Report Settings</strong> with the new month and year.<br>
+        2. In <strong>Extra Hours Staff</strong>, update or add staff who worked overtime — add each shift entry.<br>
+        3. In <strong>Leave Staff</strong>, update dates, absent days and work % for anyone on leave.<br>
+        4. In <strong>One-Off Replacements</strong>, add any single-shift cover staff.<br>
+        5. Click <strong>Generate PDF</strong> to download the formatted report.
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 1: Extra Hours Staff -->
+  <div class="tab-panel" id="tab-1">
+    <div class="panel-topbar">
+      <div>
+        <div class="panel-topbar-title">Extra hours staff</div>
+        <div class="panel-topbar-sub">Staff who worked additional or replacement shifts</div>
+      </div>
+      <button class="btn btn-add" onclick="addExtraStaff()">+ Add staff member</button>
+    </div>
+    <div id="extra-staff-list"></div>
+  </div>
+
+  <!-- TAB 2: Leave Staff -->
+  <div class="tab-panel" id="tab-2">
+    <div class="panel-topbar">
+      <div>
+        <div class="panel-topbar-title">Staff on leave</div>
+        <div class="panel-topbar-sub">Staff who were absent or on leave this month</div>
+      </div>
+      <button class="btn btn-add" onclick="addLeaveStaff()">+ Add staff member</button>
+    </div>
+    <div id="leave-staff-list"></div>
+  </div>
+
+  <!-- TAB 3: One-Off -->
+  <div class="tab-panel" id="tab-3">
+    <div class="panel-topbar">
+      <div>
+        <div class="panel-topbar-title">One-off replacements</div>
+        <div class="panel-topbar-sub">Staff who covered a single shift this month</div>
+      </div>
+      <button class="btn btn-add" onclick="addOneOff()">+ Add entry</button>
+    </div>
+    <div id="oneoff-list"></div>
+  </div>
+
 </div>
 
 <script>
-    const shiftHours = [4, 10, 6, 4];
-    // Corrected label: 6-12 is now PM
-    const shiftLabels = ["4 AM - 8 AM", "8 AM - 6 PM", "6 PM - 12 AM", "12 AM - 4 AM"];
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const PALETTE = [
+  {bg:'#EEEDFE',fg:'#3C3489',accent:'#7F77DD'},
+  {bg:'#E1F5EE',fg:'#085041',accent:'#1D9E75'},
+  {bg:'#FAECE7',fg:'#712B13',accent:'#D85A30'},
+  {bg:'#E6F1FB',fg:'#0C447C',accent:'#378ADD'},
+  {bg:'#FAEEDA',fg:'#633806',accent:'#EF9F27'},
+  {bg:'#FBEAF0',fg:'#72243E',accent:'#D4537E'},
+  {bg:'#EAF3DE',fg:'#27500A',accent:'#639922'},
+];
 
-    let staffList = JSON.parse(localStorage.getItem('staff_v5')) || ["Binita Sharma", "Binita Khatiwada", "Kiran", "Prabesh Acharya", "Samipya", "Babita Acharya"];
-    let weeklyRoutine = JSON.parse(localStorage.getItem('routine_v5')) || {
-        "Sunday": [staffList[0], staffList[1], staffList[2], staffList[3]],
-        "Monday": [staffList[0], staffList[1], staffList[4], staffList[5]],
-        "Tuesday": [staffList[0], staffList[4], staffList[2], staffList[3]],
-        "Wednesday": [staffList[0], staffList[1], staffList[4], staffList[5]],
-        "Thursday": [staffList[0], staffList[1], staffList[2], staffList[3]],
-        "Friday": [staffList[0], staffList[5], staffList[2], staffList[3]],
-        "Saturday": [staffList[1], staffList[3], staffList[2], staffList[5]]
-    };
-    let leaveData = JSON.parse(localStorage.getItem('leaves_v5')) || [];
-    let salaries = JSON.parse(localStorage.getItem('salaries_v5')) || {};
+function switchTab(i) {
+  document.querySelectorAll('.tab').forEach((t,j) => t.classList.toggle('active',i===j));
+  document.querySelectorAll('.tab-panel').forEach((p,j) => p.classList.toggle('active',i===j));
+}
 
-    function saveAll() {
-        localStorage.setItem('staff_v5', JSON.stringify(staffList));
-        localStorage.setItem('routine_v5', JSON.stringify(weeklyRoutine));
-        localStorage.setItem('leaves_v5', JSON.stringify(leaveData));
-        localStorage.setItem('salaries_v5', JSON.stringify(salaries));
-        render();
+function getInitials(name) {
+  return (name||'').trim().split(/\s+/).map(w=>w[0]||'').join('').slice(0,2).toUpperCase()||'?';
+}
+
+function hexToRgb(hex) {
+  return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
+}
+
+function formatDate(v) {
+  if (!v) return '';
+  const d = new Date(v+'T12:00:00');
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+}
+
+/* ── Extra Hours Staff ──────────────────────────── */
+let extraCount = 0;
+const shiftCounts = {};
+
+function addExtraStaff(prefill) {
+  const id = ++extraCount;
+  const col = PALETTE[(id-1) % PALETTE.length];
+  const div = document.createElement('div');
+  div.className = 'staff-block';
+  div.id = `ex-${id}`;
+  div.innerHTML = `
+    <div class="staff-block-header">
+      <div class="avatar" id="av-ex-${id}" style="background:${col.bg};color:${col.fg}">?</div>
+      <div style="flex:1;min-width:0">
+        <input class="name-input" id="name-ex-${id}" placeholder="Staff name"
+          oninput="document.getElementById('av-ex-${id}').textContent=getInitials(this.value);updateTotals(${id})">
+        <input class="role-input" id="role-ex-${id}" placeholder="Role / description">
+      </div>
+      <button class="btn btn-remove" onclick="document.getElementById('ex-${id}').remove()">Remove</button>
+    </div>
+    <div style="display:grid;grid-template-columns:100px 1fr 1fr 70px 36px;gap:8px;margin-bottom:4px;padding:0 2px">
+      <span class="col-header">Date</span>
+      <span class="col-header">Time range</span>
+      <span class="col-header">Covering for (optional)</span>
+      <span class="col-header">Hours</span>
+      <span></span>
+    </div>
+    <div id="shifts-ex-${id}"></div>
+    <button class="btn btn-add" style="margin-top:6px" onclick="addShift(${id})">+ Add shift</button>
+    <div class="totals-bar">
+      Total: <strong id="tot-hrs-${id}">0</strong> hrs &nbsp;·&nbsp;
+      Payment: <strong id="tot-pay-${id}">$0.00</strong>
+      <span class="tag-pay" id="pay-tag-${id}" style="display:none"></span>
+    </div>`;
+  document.getElementById('extra-staff-list').appendChild(div);
+  if (prefill) {
+    document.getElementById(`name-ex-${id}`).value = prefill.name || '';
+    document.getElementById(`av-ex-${id}`).textContent = getInitials(prefill.name||'');
+    document.getElementById(`role-ex-${id}`).value = prefill.role || '';
+    (prefill.shifts||[]).forEach((s,i) => {
+      addShift(id, s);
+    });
+  } else {
+    addShift(id);
+  }
+  updateTotals(id);
+}
+
+function addShift(staffId, prefill) {
+  if (!shiftCounts[staffId]) shiftCounts[staffId] = 0;
+  const sId = ++shiftCounts[staffId];
+  const div = document.createElement('div');
+  div.id = `shift-${staffId}-${sId}`;
+  div.className = 'shift-grid shift-grid-4';
+  div.innerHTML = `
+    <input type="date" id="sd-${staffId}-${sId}">
+    <input placeholder="e.g. 17:59 – 23:59" id="st-${staffId}-${sId}">
+    <input placeholder="Person they covered" id="sc-${staffId}-${sId}">
+    <input type="number" placeholder="Hrs" min="0" max="24" step="0.5" id="sh-${staffId}-${sId}"
+      oninput="updateTotals(${staffId})">
+    <button class="rm-btn" title="Remove" onclick="document.getElementById('shift-${staffId}-${sId}').remove();updateTotals(${staffId})">×</button>`;
+  document.getElementById(`shifts-ex-${staffId}`).appendChild(div);
+  if (prefill) {
+    document.getElementById(`sd-${staffId}-${sId}`).value = prefill.date||'';
+    document.getElementById(`st-${staffId}-${sId}`).value = prefill.time||'';
+    document.getElementById(`sc-${staffId}-${sId}`).value = prefill.cover||'';
+    document.getElementById(`sh-${staffId}-${sId}`).value = prefill.hrs||'';
+  }
+}
+
+function updateTotals(staffId) {
+  const rate = parseFloat(document.getElementById('r-rate').value)||2.5;
+  let total = 0;
+  document.querySelectorAll(`[id^="sh-${staffId}-"]`).forEach(el => {
+    total += parseFloat(el.value)||0;
+  });
+  document.getElementById(`tot-hrs-${staffId}`).textContent = total;
+  const pay = (total * rate).toFixed(2);
+  document.getElementById(`tot-pay-${staffId}`).textContent = `$${pay}`;
+}
+
+/* ── Leave Staff ──────────────────────────────── */
+let leaveCount = 0;
+
+function addLeaveStaff(prefill) {
+  const id = ++leaveCount;
+  const col = PALETTE[(id-1) % PALETTE.length];
+  const div = document.createElement('div');
+  div.className = 'staff-block';
+  div.id = `lv-${id}`;
+  div.innerHTML = `
+    <div class="staff-block-header">
+      <div class="avatar" id="av-lv-${id}" style="background:${col.bg};color:${col.fg}">?</div>
+      <input class="name-input" id="name-lv-${id}" placeholder="Staff name" style="flex:1"
+        oninput="document.getElementById('av-lv-${id}').textContent=getInitials(this.value)">
+      <button class="btn btn-remove" onclick="document.getElementById('lv-${id}').remove()">Remove</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Leave start</label><input type="date" id="ls-${id}"></div>
+      <div class="form-group"><label>Leave end</label><input type="date" id="le-${id}"></div>
+      <div class="form-group"><label>Absent working days</label><input type="number" id="la-${id}" placeholder="e.g. 9" min="0"></div>
+      <div class="form-group"><label>Worked % of month</label><input type="number" id="lp-${id}" placeholder="e.g. 70" min="0" max="100"></div>
+    </div>`;
+  document.getElementById('leave-staff-list').appendChild(div);
+  if (prefill) {
+    document.getElementById(`name-lv-${id}`).value = prefill.name||'';
+    document.getElementById(`av-lv-${id}`).textContent = getInitials(prefill.name||'');
+    document.getElementById(`ls-${id}`).value = prefill.start||'';
+    document.getElementById(`le-${id}`).value = prefill.end||'';
+    document.getElementById(`la-${id}`).value = prefill.absent||'';
+    document.getElementById(`lp-${id}`).value = prefill.pct||'';
+  }
+}
+
+/* ── One-Off Staff ──────────────────────────── */
+let oneoffCount = 0;
+
+function addOneOff(prefill) {
+  const id = ++oneoffCount;
+  const col = PALETTE[(id-1) % PALETTE.length];
+  const div = document.createElement('div');
+  div.className = 'staff-block';
+  div.id = `oo-${id}`;
+  div.innerHTML = `
+    <div class="staff-block-header">
+      <div class="avatar" id="av-oo-${id}" style="background:${col.bg};color:${col.fg}">?</div>
+      <input class="name-input" id="name-oo-${id}" placeholder="Staff name" style="flex:1"
+        oninput="document.getElementById('av-oo-${id}').textContent=getInitials(this.value)">
+      <button class="btn btn-remove" onclick="document.getElementById('oo-${id}').remove()">Remove</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Date</label><input type="date" id="od-${id}"></div>
+      <div class="form-group"><label>Shift time</label><input id="ot-${id}" placeholder="e.g. 6:00 PM – 12:00 AM"></div>
+      <div class="form-group"><label>Hours</label><input type="number" id="oh-${id}" placeholder="e.g. 6" min="0" step="0.5"></div>
+      <div class="form-group"><label>Notes / Event</label><input id="on-${id}" placeholder="e.g. Willow/GC event"></div>
+    </div>`;
+  document.getElementById('oneoff-list').appendChild(div);
+  if (prefill) {
+    document.getElementById(`name-oo-${id}`).value = prefill.name||'';
+    document.getElementById(`av-oo-${id}`).textContent = getInitials(prefill.name||'');
+    document.getElementById(`od-${id}`).value = prefill.date||'';
+    document.getElementById(`ot-${id}`).value = prefill.time||'';
+    document.getElementById(`oh-${id}`).value = prefill.hrs||'';
+    document.getElementById(`on-${id}`).value = prefill.note||'';
+  }
+}
+
+/* ── Data Collection ────────────────────────── */
+function collectExtra() {
+  const out = [];
+  for (let id = 1; id <= extraCount; id++) {
+    if (!document.getElementById(`ex-${id}`)) continue;
+    const name = document.getElementById(`name-ex-${id}`).value.trim();
+    const role = document.getElementById(`role-ex-${id}`).value.trim();
+    const shifts = [];
+    for (let s = 1; s <= (shiftCounts[id]||0); s++) {
+      if (!document.getElementById(`shift-${id}-${s}`)) continue;
+      const hrs = parseFloat(document.getElementById(`sh-${id}-${s}`).value)||0;
+      const date = document.getElementById(`sd-${id}-${s}`).value;
+      if (!hrs && !date) continue;
+      shifts.push({
+        date, time: document.getElementById(`st-${id}-${s}`).value,
+        cover: document.getElementById(`sc-${id}-${s}`).value, hrs
+      });
     }
+    const totalHrs = shifts.reduce((a,r)=>a+r.hrs,0);
+    out.push({ name, role, shifts, totalHrs, color: PALETTE[(id-1)%PALETTE.length] });
+  }
+  return out;
+}
 
-    // --- DASHBOARD LOGIC ---
-    function renderDashboard() {
-        const container = document.getElementById('dash-container');
-        const now = new Date();
-        const dayName = days[now.getDay()];
-        const todayStr = now.toISOString().split('T')[0];
-        const hour = now.getHours();
+function collectLeave() {
+  const out = [];
+  for (let id = 1; id <= leaveCount; id++) {
+    if (!document.getElementById(`lv-${id}`)) continue;
+    out.push({
+      name: document.getElementById(`name-lv-${id}`).value.trim(),
+      start: document.getElementById(`ls-${id}`).value,
+      end: document.getElementById(`le-${id}`).value,
+      absent: parseInt(document.getElementById(`la-${id}`).value)||0,
+      pct: parseInt(document.getElementById(`lp-${id}`).value)||0,
+      color: PALETTE[(id-1)%PALETTE.length]
+    });
+  }
+  return out;
+}
 
-        container.innerHTML = weeklyRoutine[dayName].map((scheduled, idx) => {
-            // Shift Time Detection
-            let isActive = false;
-            if (idx === 0 && hour >= 4 && hour < 8) isActive = true;
-            if (idx === 1 && hour >= 8 && hour < 18) isActive = true;
-            if (idx === 2 && hour >= 18 && hour < 24) isActive = true;
-            if (idx === 3 && hour >= 0 && hour < 4) isActive = true;
+function collectOneOff() {
+  const out = [];
+  for (let id = 1; id <= oneoffCount; id++) {
+    if (!document.getElementById(`oo-${id}`)) continue;
+    out.push({
+      name: document.getElementById(`name-oo-${id}`).value.trim(),
+      date: document.getElementById(`od-${id}`).value,
+      time: document.getElementById(`ot-${id}`).value,
+      hrs: parseFloat(document.getElementById(`oh-${id}`).value)||0,
+      note: document.getElementById(`on-${id}`).value,
+      color: PALETTE[(id-1)%PALETTE.length]
+    });
+  }
+  return out;
+}
 
-            const log = leaveData.find(l => l.date === todayStr && l.shiftIdx === idx);
-            const isReplaced = !!log;
-            const displayStaff = isReplaced ? log.replacedBy : scheduled;
+/* ── PDF Generation ─────────────────────────── */
+function generatePDF() {
+  if (!window.jspdf) { alert('PDF library is loading, please try again in a moment.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ format:'a4', unit:'mm' });
 
-            return `
-                <div class="shift-card ${isActive ? 'active' : ''} ${isReplaced ? 'replaced' : ''}">
-                    ${isReplaced ? '<span class="status-badge status-rep">Replaced</span>' : (isActive ? '<span class="status-badge status-on">Live</span>' : '')}
-                    <div style="font-size: 11px; color: var(--text-dim); font-weight: bold;">${shiftLabels[idx]}</div>
-                    <div style="font-size: 18px; font-weight: bold; margin: 8px 0;">${displayStaff}</div>
-                    
-                    <div style="margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
-                        <label style="font-size:9px">QUICK REPLACE / REASSIGN</label>
-                        <select onchange="dashboardReplace(${idx}, '${scheduled}', this.value)">
-                            <option value="">-- Choose Staff --</option>
-                            ${staffList.map(s => `<option value="${s}" ${displayStaff === s ? 'selected' : ''}>${s}</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
+  const month = document.getElementById('r-month').value;
+  const year  = document.getElementById('r-year').value;
+  const rate  = parseFloat(document.getElementById('r-rate').value)||2.5;
 
-    function dashboardReplace(idx, scheduledInRoutine, selectedName) {
-        const todayStr = new Date().toISOString().split('T')[0];
-        
-        // 1. Always clear existing replacement log for this specific shift first
-        leaveData = leaveData.filter(l => !(l.date === todayStr && l.shiftIdx === idx));
-        
-        // 2. If selected name is NOT the one in the routine, create a replacement record
-        if (selectedName !== scheduledInRoutine && selectedName !== "") {
-            leaveData.push({ 
-                id: Date.now(), 
-                date: todayStr, 
-                shiftIdx: idx, 
-                absentStaff: scheduledInRoutine, 
-                replacedBy: selectedName, 
-                hrs: shiftHours[idx] 
-            });
-        }
-        
-        // 3. If selected name IS the same as routine, the filter above already "took the shift staff name"
-        saveAll();
-    }
+  const extraStaff = collectExtra();
+  const leaveStaff = collectLeave();
+  const oneOff     = collectOneOff();
 
-    // --- ROUTINE & STAFF ---
-    function renderRoutine() {
-        document.getElementById('routine-body').innerHTML = days.map(day => `
-            <tr>
-                <td style="font-weight:bold">${day}</td>
-                ${weeklyRoutine[day].map((s, idx) => `
-                    <td><select onchange="weeklyRoutine['${day}'][${idx}]=this.value;saveAll()">
-                        ${staffList.map(st => `<option value="${st}" ${st===s?'selected':''}>${st}</option>`).join('')}
-                    </select></td>
-                `).join('')}
-            </tr>
-        `).join('');
-    }
+  const M  = 18;
+  const PW = 210;
+  const CW = PW - 2*M;
+  const C  = {
+    gray:[241,239,232], border:[211,209,199], text:[44,44,42],
+    textSec:[95,94,90], white:[255,255,255],
+    purple:[127,119,221], teal:[29,158,117],
+    amber:[239,159,39], amberL:[250,238,218], amberD:[99,56,6],
+  };
 
-    function addLeaveRange() {
-        let cur = new Date(document.getElementById('lv-start').value);
-        let end = new Date(document.getElementById('lv-end').value || document.getElementById('lv-start').value);
-        const abs = document.getElementById('lv-absent').value;
-        const cov = document.getElementById('lv-cover').value;
-        if (!abs || !cov || abs === cov) return alert("Please select two different staff members.");
+  let y = M;
 
-        while (cur <= end) {
-            const dStr = cur.toISOString().split('T')[0];
-            const dName = days[cur.getDay()];
-            weeklyRoutine[dName].forEach((s, idx) => {
-                if (s === abs) {
-                    leaveData = leaveData.filter(l => !(l.date === dStr && l.shiftIdx === idx));
-                    leaveData.push({ id: Date.now()+Math.random(), date: dStr, shiftIdx: idx, absentStaff: abs, replacedBy: cov, hrs: shiftHours[idx] });
-                }
-            });
-            cur.setDate(cur.getDate() + 1);
-        }
-        saveAll();
-    }
+  function checkPage(need) {
+    if (y + need > 282) { doc.addPage(); y = M; }
+  }
 
-    function addStaff() {
-        const n = document.getElementById('new-staff-name').value.trim();
-        if (n && !staffList.includes(n)) { staffList.push(n); saveAll(); }
-    }
+  function box(x,by,w,h,fill,stroke,r) {
+    doc.setFillColor(...fill);
+    if (stroke) { doc.setDrawColor(...stroke); doc.setLineWidth(0.3); }
+    else doc.setLineWidth(0);
+    r ? doc.roundedRect(x,by,w,h,r,r,stroke?'FD':'F')
+      : doc.rect(x,by,w,h,stroke?'FD':'F');
+  }
 
-    function renameStaff() {
-        const oldN = document.getElementById('rename-old').value;
-        const newN = document.getElementById('rename-new').value.trim();
-        if (!oldN || !newN) return;
-        staffList[staffList.indexOf(oldN)] = newN;
-        for (let d in weeklyRoutine) weeklyRoutine[d] = weeklyRoutine[d].map(s => s === oldN ? newN : s);
-        leaveData.forEach(l => {
-            if (l.absentStaff === oldN) l.absentStaff = newN;
-            if (l.replacedBy === oldN) l.replacedBy = newN;
+  function txt(s,x,ty,opts,color,size,bold) {
+    doc.setTextColor(...(color||C.text));
+    doc.setFontSize(size||10);
+    doc.setFont('helvetica',bold?'bold':'normal');
+    doc.text(String(s),x,ty,opts||{});
+  }
+
+  function sectionHdr(title) {
+    checkPage(14);
+    y += 4;
+    txt(title.toUpperCase(),M,y,{},C.textSec,7.5,true);
+    y += 3;
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
+    doc.line(M,y,M+CW,y);
+    y += 6;
+  }
+
+  function avatar(ax,ay,initials,bg,fg) {
+    box(ax,ay,14,14,hexToRgb(bg),null,7);
+    txt(initials,ax+7,ay+9.5,{align:'center'},hexToRgb(fg),7.5,true);
+  }
+
+  function statBox(bx,by,bw,label,value) {
+    box(bx,by,bw,16,C.gray,C.border,2);
+    txt(label,bx+bw/2,by+5.5,{align:'center'},C.textSec,7,false);
+    txt(value,bx+bw/2,by+13,{align:'center'},C.text,13,true);
+  }
+
+  /* Header */
+  box(M,y,CW,22,C.gray,C.border,3);
+  box(M,y,3,22,hexToRgb(PALETTE[0].accent),null,0);
+  txt(`${month} ${year}`,M+9,y+10,{},C.text,18,true);
+  txt('Attendance & Support Hours Report',M+9,y+17,{},C.textSec,10,false);
+  y += 28;
+
+  /* Extra Hours Staff */
+  if (extraStaff.length) {
+    sectionHdr('Support hours');
+    extraStaff.forEach((s,si) => {
+      const rows = s.shifts.map(sh=>[
+        formatDate(sh.date), sh.time, sh.cover||'—', sh.hrs||'—'
+      ]);
+      const hasCover = s.shifts.some(sh=>sh.cover);
+      const cardH = 18 + 22 + (rows.length * 7.5 + 12) + 12;
+      checkPage(cardH);
+
+      const cardY = y;
+      box(M-2,cardY-3,CW+4,cardH+4,C.white,C.border,3);
+
+      avatar(M,y,getInitials(s.name),s.color.bg,s.color.fg);
+      txt(s.name||'(No name)',M+18,y+7,{},C.text,13,true);
+      txt(s.role||'Support',M+18,y+12,{},C.textSec,9,false);
+      y += 18;
+
+      const hw = (CW-4)/2;
+      statBox(M,y,hw,'Total hours',`${s.totalHrs} hrs`);
+      statBox(M+hw+4,y,hw,'Shifts',`${s.shifts.length}`);
+      y += 22;
+
+      if (rows.length) {
+        const cols  = hasCover ? ['Date','Time','Covering','Hrs'] : ['Date','Time','Hrs'];
+        const brows = hasCover ? rows : rows.map(r=>[r[0],r[1],r[3]]);
+        const cw    = hasCover
+          ? [28,CW*0.33,CW*0.34,CW*0.13]
+          : [28,CW*0.52,CW*0.2];
+        doc.autoTable({
+          head:[cols], body:brows, startY:y,
+          margin:{left:M,right:M},
+          columnStyles:Object.fromEntries(cw.map((w,i)=>[i,{cellWidth:w}])),
+          styles:{fontSize:8.5,cellPadding:{top:3,bottom:3,left:5,right:5},textColor:C.text},
+          headStyles:{fillColor:C.gray,textColor:C.textSec,fontStyle:'bold',fontSize:7.5},
+          alternateRowStyles:{fillColor:[248,247,244]},
+          tableLineColor:C.border,tableLineWidth:0.2,
         });
-        if (salaries[oldN]) { salaries[newN] = salaries[oldN]; delete salaries[oldN]; }
-        saveAll();
+        y = doc.lastAutoTable.finalY + 2;
+      }
+      y += 10;
+    });
+  }
+
+  /* Leave Staff */
+  if (leaveStaff.length) {
+    sectionHdr('Leave summary');
+    for (let i = 0; i < leaveStaff.length; i += 2) {
+      const cardW = (CW-6)/2;
+      const cardH = 58;
+      checkPage(cardH + 8);
+      const rowY = y;
+      [leaveStaff[i], leaveStaff[i+1]].forEach((s,col) => {
+        if (!s) return;
+        const cx = M + col*(cardW+6);
+        box(cx,rowY,cardW,cardH,C.white,C.border,3);
+        avatar(cx+8,rowY+8,getInitials(s.name),s.color.bg,s.color.fg);
+        txt(s.name||'(No name)',cx+26,rowY+14,{},C.text,11,true);
+        const period = s.start&&s.end ? `Leave: ${formatDate(s.start)} – ${formatDate(s.end)}` : 'Leave period not set';
+        txt(period,cx+8,rowY+28,{},C.textSec,8,false);
+        const sw = (cardW-24)/2;
+        box(cx+8,rowY+32,sw,13,C.gray,C.border,2);
+        txt('Absent days',cx+8+sw/2,rowY+37,{align:'center'},C.textSec,6.5,false);
+        txt(`${s.absent}`,cx+8+sw/2,rowY+43,{align:'center'},C.text,12,true);
+        box(cx+10+sw,rowY+32,sw,13,C.gray,C.border,2);
+        txt('Worked',cx+10+sw+sw/2,rowY+37,{align:'center'},C.textSec,6.5,false);
+        txt(`${s.pct}%`,cx+10+sw+sw/2,rowY+43,{align:'center'},C.text,12,true);
+        const barW = cardW-16;
+        box(cx+8,rowY+50,barW,4,C.gray,null,2);
+        box(cx+8,rowY+50,Math.max(barW*s.pct/100,2),4,hexToRgb(s.color.accent),null,2);
+      });
+      y = rowY + cardH + 6;
     }
+    y += 4;
+  }
 
-    // --- PAYROLL & CORE ---
-    function renderPayroll() {
-        const grid = document.getElementById('payroll-grid');
-        grid.innerHTML = staffList.map(s => {
-            const fin = salaries[s] || { base: 0, rate: 0 };
-            let monthlyExpected = 0;
-            days.forEach(d => { monthlyExpected += weeklyRoutine[d].filter(st => st === s).length * 4; });
-            
-            const absents = leaveData.filter(l => l.absentStaff === s).length;
-            const extraHrs = leaveData.filter(l => l.replacedBy === s).reduce((sum, l) => sum + l.hrs, 0);
-            const absPct = monthlyExpected > 0 ? ((absents / monthlyExpected) * 100).toFixed(1) : 0;
-            const net = (fin.base * (1 - (absPct/100))) + (extraHrs * fin.rate);
+  /* One-Off */
+  if (oneOff.length) {
+    sectionHdr('One-off replacements');
+    checkPage(oneOff.length * 18 + 10);
+    const cardY = y;
+    box(M-2,cardY-3,CW+4,oneOff.length*18+4,C.white,C.border,3);
+    oneOff.forEach((s,i) => {
+      if (i > 0) { doc.setDrawColor(...C.border); doc.setLineWidth(0.2); doc.line(M,y,M+CW,y); }
+      avatar(M,y,getInitials(s.name),s.color.bg,s.color.fg);
+      txt(s.name||'(No name)',M+18,y+7,{},C.text,11,true);
+      const detail = [formatDate(s.date),s.time,s.hrs?`${s.hrs} hrs`:'',s.note].filter(Boolean).join('  ·  ');
+      txt(detail,M+18,y+13,{},C.textSec,8.5,false);
+      y += 18;
+    });
+    y += 8;
+  }
 
-            return `
-                <div class="card">
-                    <h3 style="margin-bottom:12px">${s}</h3>
-                    <div class="form-row">
-                        <div><label>Base Salary</label><input type="number" value="${fin.base}" onchange="updateFin('${s}','base',this.value)"></div>
-                        <div><label>Extra Hr Pay</label><input type="number" value="${fin.rate}" onchange="updateFin('${s}','rate',this.value)"></div>
-                    </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                        <div class="stat-box"><span class="stat-val" style="color:var(--danger)">${absPct}%</span><span class="stat-lbl">Absent</span></div>
-                        <div class="stat-box"><span class="stat-val" style="color:var(--success)">+${extraHrs}h</span><span class="stat-lbl">Covered</span></div>
-                    </div>
-                    <div style="margin-top:15px; padding:12px; background:var(--bg); border-radius:8px; text-align:center;">
-                        <span style="font-size:10px; color:var(--text-dim); font-weight:bold;">NET PAYABLE</span>
-                        <div style="font-size:22px; font-weight:bold; color:var(--primary)">Rs. ${net.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
+  /* Payment */
+  const payStaff = [
+    ...extraStaff.filter(s=>s.totalHrs>0),
+    ...oneOff.filter(s=>s.hrs>0).map(s=>({...s,totalHrs:s.hrs}))
+  ];
+  if (payStaff.length) {
+    sectionHdr('Extra hours payment');
+    const totalHrs = payStaff.reduce((a,s)=>a+s.totalHrs,0);
+    const totalPay = totalHrs * rate;
 
-    function updateFin(s, field, val) {
-        if (!salaries[s]) salaries[s] = { base: 0, rate: 0 };
-        salaries[s][field] = parseFloat(val) || 0;
-        localStorage.setItem('salaries_v5', JSON.stringify(salaries));
-        renderPayroll();
-    }
+    checkPage(24);
+    const mw = (CW-8)/3;
+    statBox(M,y,mw,'Staff eligible',`${payStaff.length}`);
+    statBox(M+mw+4,y,mw,'Total extra hours',`${totalHrs} hrs`);
+    statBox(M+2*(mw+4),y,mw,'Total payable',`$${totalPay.toFixed(2)}`);
+    y += 24;
 
-    function render() {
-        const time = new Date();
-        document.getElementById('live-clock').innerText = time.toDateString() + " | " + time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        
-        const drops = document.querySelectorAll('.staff-drop');
-        const optHtml = staffList.map(s => `<option value="${s}">${s}</option>`).join('');
-        drops.forEach(d => d.innerHTML = '<option value="">-- Select --</option>' + optHtml);
-        
-        renderDashboard();
-        renderRoutine();
-        renderPayroll();
-        
-        document.getElementById('leave-log').innerHTML = leaveData.slice(-5).reverse().map(l => `
-            <div style="font-size:11px; padding:6px 0; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between;">
-                <span><b>${l.date}</b>: ${l.absentStaff} → ${l.replacedBy} (${l.hrs}h)</span>
-                <span style="color:var(--danger); cursor:pointer; font-weight:bold;" onclick="deleteLeave(${l.id})">DELETE</span>
-            </div>
-        `).join('');
-    }
+    checkPage(payStaff.length * 8 + 20);
+    const payRows = payStaff.map(s=>[s.name,`${s.totalHrs} hrs`,`$${rate.toFixed(2)}`,`$${(s.totalHrs*rate).toFixed(2)}`]);
+    payRows.push(['Total',`${totalHrs} hrs`,'',`$${totalPay.toFixed(2)}`]);
 
-    function deleteLeave(id) {
-        leaveData = leaveData.filter(l => l.id !== id);
-        saveAll();
-    }
+    doc.autoTable({
+      head:[['Staff member','Extra hours','Rate / hr','Payment due']],
+      body:payRows,startY:y,margin:{left:M,right:M},
+      columnStyles:{
+        0:{cellWidth:CW*0.42},
+        1:{cellWidth:CW*0.19,halign:'right'},
+        2:{cellWidth:CW*0.19,halign:'right'},
+        3:{cellWidth:CW*0.20,halign:'right',fontStyle:'bold'},
+      },
+      styles:{fontSize:9,cellPadding:{top:4,bottom:4,left:6,right:6},textColor:C.text},
+      headStyles:{fillColor:C.amberL,textColor:C.amberD,fontStyle:'bold',fontSize:8},
+      alternateRowStyles:{fillColor:[248,247,244]},
+      didParseCell(d){
+        if(d.row.index===payRows.length-1){
+          d.cell.styles.fontStyle='bold';
+          d.cell.styles.fillColor=C.amberL;
+          d.cell.styles.textColor=C.amberD;
+        }
+      },
+      tableLineColor:C.border,tableLineWidth:0.2,
+    });
+    y = doc.lastAutoTable.finalY + 5;
+    txt(`* Payment calculated at $${rate.toFixed(2)} per extra hour. Applies only to staff with recorded extra working hours.`,
+      M,y,{},C.textSec,7.5,false);
+  }
 
-    function switchTab(tab) {
-        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('panel-' + tab).classList.add('active');
-        event.currentTarget.classList.add('active');
-    }
+  /* Footer */
+  const pages = doc.getNumberOfPages();
+  const genDate = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  for (let p=1;p<=pages;p++) {
+    doc.setPage(p);
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.3);
+    doc.line(M,287,M+CW,287);
+    txt(`Generated ${genDate}`,M,292,{},C.textSec,7.5,false);
+    txt(`Page ${p} of ${pages}`,M+CW,292,{align:'right'},C.textSec,7.5,false);
+  }
 
-    setInterval(render, 60000); // Auto-refresh everything every minute for live status
-    render();
+  doc.save(`${month}_${year}_Attendance_Report.pdf`);
+}
+
+/* ── Pre-load April 2026 sample data ─────────── */
+window.addEventListener('load', () => {
+  addExtraStaff({ name:'Prabesh Acharya', role:'Support — extra shifts', shifts:[
+    {date:'2026-04-06',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-08',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-11',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-13',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-15',time:'04:00 – 06:00',cover:'',hrs:2},
+    {date:'2026-04-15',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-17',time:'04:00 – 06:00',cover:'',hrs:2},
+    {date:'2026-04-18',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-20',time:'04:00 – 06:00',cover:'',hrs:2},
+    {date:'2026-04-20',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-22',time:'04:00 – 06:00',cover:'',hrs:2},
+    {date:'2026-04-22',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-24',time:'04:00 – 06:00',cover:'',hrs:2},
+    {date:'2026-04-25',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-27',time:'17:59 – 23:59',cover:'',hrs:6},
+    {date:'2026-04-29',time:'17:59 – 23:59',cover:'',hrs:6},
+  ]});
+
+  addExtraStaff({ name:'Babita Acharya', role:'Replacement shifts', shifts:[
+    {date:'2026-04-02',time:'12:00 pm – 4:00 am',cover:'Prabesh Acharya',hrs:4},
+    {date:'2026-04-07',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-09',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-12',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-14',time:'4:00 am – 8:00 am', cover:'Binita Sharma',hrs:4},
+    {date:'2026-04-15',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-17',time:'4:00 am – 6:00 am', cover:'Binita Sharma',hrs:2},
+    {date:'2026-04-17',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-19',time:'4:00 am – 8:00 am', cover:'Binita Sharma',hrs:4},
+    {date:'2026-04-19',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-21',time:'4:00 am – 6:00 am', cover:'Binita Sharma',hrs:2},
+    {date:'2026-04-21',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-23',time:'4:00 am – 6:00 am', cover:'Binita Sharma',hrs:2},
+    {date:'2026-04-23',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-26',time:'4:00 am – 8:00 am', cover:'Binita Sharma',hrs:4},
+    {date:'2026-04-26',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+    {date:'2026-04-28',time:'6:00 pm – 12:00 am',cover:'Kiran Poudel',hrs:6},
+  ]});
+
+  addLeaveStaff({name:'Kiran Poudel',  start:'2026-04-09',end:'2026-04-28',absent:16,pct:47});
+  addLeaveStaff({name:'Binita Sharma', start:'2026-04-14',end:'2026-04-24',absent:9, pct:70});
+  addLeaveStaff({name:'Samipya',       start:'2026-04-19',end:'2026-04-30',absent:8, pct:70});
+  addLeaveStaff({name:'Babita Sardar', start:'2026-04-19',end:'2026-04-30',absent:10,pct:67});
+
+  addOneOff({name:'Binita Khatiwada',date:'2026-04-30',time:'6:00 PM – 12:00 AM',hrs:6,note:'Willow/GC event'});
+});
 </script>
-
 </body>
 </html>
